@@ -68,13 +68,13 @@
 	; INVENTORY DATA
     INVTITLE    DB 0AH,0DH, "			|| INVENTORY LIST ||$", 0AH,0DH, '$'
     ITEM1       DB "1. Soda Can    - Price: RM2.00 | Stock: $"
-    STOCK1      DW 150  
+    STOCK1      DW 5150  
 	PRICE1 		DW 2
     ITEM2       DB "2. Chips       - Price: RM3.00 | Stock: $"
-    STOCK2      DW 65
+    STOCK2      DW 2165
 	PRICE2		DW 3
     ITEM3       DB "3. Sandwich    - Price: RM5.00 | Stock: $"
-    STOCK3      DW 24
+    STOCK3      DW 1224
 	PRICE3		DW 5
 	
 	;NEW SALES DATA
@@ -89,19 +89,19 @@
 	NSTOCK1		DW ?
 	NSTOCK2		DW ?           
 	NSTOCK3		DW ?
-	SELL1		DB 0AH,0DH,'HOW MUCH SODA TO BE SOLD: $', 0AH,0DH,'$'
+	SELL1		DB 0AH,0DH,'HOW MUCH SODA TO BE SOLD: $',0AH,0DH,'$'
 	SOLD1		DW ?
-	SELL2		DB 0AH,0DH,'HOW MUCH CHIPS TO BE SOLD: $', 0AH,0DH,'$'
+	SELL2		DB 0AH,0DH,'HOW MUCH CHIPS TO BE SOLD: $',0AH,0DH,'$'
 	SOLD2		DW ?
-	SELL3		DB 0AH,0DH,'HOW MUCH SANDWICH TO BE SOLD: $', 0AH,0DH,'$'	
+	SELL3		DB 0AH,0DH,'HOW MUCH SANDWICH TO BE SOLD: $',0AH,0DH,'$'	
 	SOLD3		DW ?
+	OVRSTOCK 	DB 0AH,0DH,'SOLD AMOUNT GREATER THAN STOCK,TRY AGAIN$',0AH,0DH,'$'
 	;SALES REPORT DATA
 	TTLSALE 	DB 0AH,0DH,'==========TOTAL SALES==========$',0AH,0DH,'$'
 	REPITEM1	DB 0AH,0DH,'1. Soda Can    - Price: RM2.00 | Sold:RM'
 	AMNTITEM1	DB ?
 	REPSTOCK1	DW ?
-	;REPSTOCK2	DW ?
-	;REPSTOCK3	DW ?
+
 	
 	
 	
@@ -606,19 +606,17 @@ MAIN PROC
 	CMP AL,'2'
 	JE SCHIPS
 	CMP AL, '3'
-	JE SSANDS
+	JE SSAND
 	CMP AL,'0'
 	LEA DX,INVSALE
 	INT 21H
 	
-	CSODA:
-	MOV 
 	
-	CCHIPS:
-	CSANDW:
+
 	SSODAS:
 	CALL SSODA
 	JMP FUNCTIONMENUJ
+	
 	SSODA:
 	;SELLING AMOUNT CHECK FOR SODA 
 	MOV AH,09H
@@ -627,12 +625,70 @@ MAIN PROC
 	LEA DX,SELL1
 	INT 21H
 	CALL INP4DIGIT
-    MOV SOLD1, AX
+	MOV PRICE1,AL
+	MUL AL
+	MOV SOLD1,AX
+	MOV AH,02H
+	MOV AL,SOLD1
+	INT 21H 	
+	
+	;MOV AH,02H ;DIDSPLAY IS 02H
+	;MOV DL,ALPHA 
+	;INT 21H
+	;CHECKING IF STOCK IS ENOUGH FOR THE SALE 
+	;MOV AX,SOLD1
+	;CMP AX,STOCK1
+	;JG INVSTOCKS
+    ;JMP SCONFIRMM
+	
 	MOV AH, 09H
     LEA DX, NL
     INT 21H
 	JMP SCONFIRMM
 	;SALES CONFIRMATION
+		
+	SCHIPS:
+	CALL SCHIP
+	JMP FUNCTIONMENUJ
+	
+	SCHIP:
+	;SELLING AMOUNT CHECK FOR CHIPS 
+	MOV AH,09H
+	LEA DX, NL
+	INT 21H
+	LEA DX,SELL2
+	INT 21H
+	CALL INP4DIGIT
+	MOV SOLD2,AX
+	MOV AH, 09H
+    LEA DX, NL
+    INT 21H
+	JMP SCONFIRMM
+	;SALES CONFIRMATION
+
+	SSAND:
+	CALL SSANDWICH
+	JMP FUNCTIONMENUJ
+	
+	SSANDWICH:
+	;SELLING AMOUNT CHECK FOR SANDWICH 
+	MOV AH,09H
+	LEA DX, NL
+	INT 21H
+	LEA DX,SELL3
+	INT 21H
+	CALL INP4DIGIT
+	MOV SOLD3,AX
+	MOV AH, 09H
+    LEA DX, NL
+    INT 21H
+	JMP SCONFIRMM
+	
+	;INVSTOCKS:
+	;JMP INVSTOCK
+	;RET
+	
+	;SALE CONFIRMATION
 	SCONFIRMM:
 	LEA DX,SCONFIRM 
 	INT 21H
@@ -648,10 +704,6 @@ MAIN PROC
 	JE SNOO
 	CMP AL,'O'
 	JNE SINN
-	RET
-	
-	SSANDS: ;ADDED ANOTHER SSAND VARIENT DUE TO ERROR A2053
-	JMP SSAND
 	RET 
 	
 	SYESS:
@@ -672,40 +724,12 @@ MAIN PROC
 	INT 21H
 	JMP SCONFIRMM
 	
-	SCHIPS:
-	CALL SCHIP
-	JMP FUNCTIONMENUJ
-	SCHIP:
-	;SELLING AMOUNT CHECK FOR CHIPS 
-	MOV AH,09H
-	LEA DX, NL
-	INT 21H
-	LEA DX,SELL2
-	INT 21H
-	CALL INP4DIGIT
-	MOV SOLD2,AX
-	MOV AH, 09H
-    LEA DX, NL
-    INT 21H
-	JMP SCONFIRMM
-	;SALES CONFIRMATION
+	;INVSTOCK:
+	;MOV AH,09H
+	;LEA DX,OVRSTOCK
+	;INT 21H 
+	;RET
 
-	SSAND:
-	CALL SSANDWICH
-	JMP FUNCTIONMENUJ
-	SSANDWICH:
-	;SELLING AMOUNT CHECK FOR SANDWICH 
-	MOV AH,09H
-	LEA DX, NL
-	INT 21H
-	LEA DX,SELL3
-	INT 21H
-	CALL INP4DIGIT
-	MOV SOLD3,AX
-	MOV AH, 09H
-    LEA DX, NL
-    INT 21H
-	JMP SCONFIRMM
 
 	
 
@@ -725,54 +749,39 @@ MAIN ENDP
 ;mov ax , (variable/digit)
 ;call PRINT_NUM_4DIGIT
 PRINT_NUM_4DIGIT PROC
-	; Save AX value in stack so we don't lose it
     PUSH AX
     PUSH BX
     PUSH CX
     PUSH DX
 
-    ; 1. DIGIT 1: THOUSANDS
-    MOV DX, 0           ; Clear DX for 32-bit/16-bit division (DX:AX)
-    MOV CX, 1000
-    DIV CX              ; AX = Quotient (Thousands), DX = Remainder
-    MOV BX, DX          ; Save remainder (0-999) in BX
-    
-    MOV DL, AL
-    ADD DL, '0'         ; Convert to ASCII
-    MOV AH, 02H
-    INT 21H             ; Print Thousands digit
+    MOV CX, 0
+    MOV BX, 10
 
-    ; 2. DIGIT 2: HUNDREDS
-    MOV AX, BX          ; Move remainder into AX
-    MOV DX, 0           ; Clear DX again
-    MOV CX, 100
-    DIV CX              ; AX = Quotient (Hundreds), DX = Remainder
-    MOV BX, DX          ; Save remainder (0-99) in BX
+CONVERT_LOOP:
+    MOV DX, 0
+    DIV BX
+    PUSH DX
+    INC CX
+    CMP AX, 0
+    JNE CONVERT_LOOP
 
-    MOV DL, AL
-    ADD DL, '0'         ; Convert to ASCII
-    MOV AH, 02H
-    INT 21H             ; Print Hundreds digit
+    MOV DX, 0
 
-    ; 3. DIGITS 3 & 4: TENS AND ONES
-    MOV AX, BX          ; Move remainder (0-99) into AX
-    MOV BL, 10
-    DIV BL              ; AL = Tens, AH = Ones
-    MOV CX, AX          ; Save results in CX (CL = Tens, CH = Ones)
+PAD_LOOP:
+    CMP CX, 4
+    JAE PRINT_LOOP
+    PUSH DX
+    INC CX
+    JMP PAD_LOOP
 
-    ; Print Tens digit
-    MOV DL, CL
+PRINT_LOOP:
+    POP DX
     ADD DL, '0'
     MOV AH, 02H
     INT 21H
+    DEC CX
+    JNZ PRINT_LOOP
 
-    ; Print Ones digit
-    MOV DL, CH
-    ADD DL, '0'
-    MOV AH, 02H
-    INT 21H
-
-    ; Restore original register values
     POP DX
     POP CX
     POP BX
@@ -785,31 +794,34 @@ INP4DIGIT PROC
     PUSH CX
     PUSH DX
 
-    MOV BX, 0
-    MOV CX, 4
+    MOV BX, 0        
+    MOV CX, 4         
 
 CHECKING:
-    MOV AH, 01H
+    MOV AH, 07H        
     INT 21H
 
-    CMP AL, 0DH
-    JE DONE         
+    CMP AL, 0DH     
+    JE DONE
 
-    CMP AL, '0'
+    CMP AL, '0'    
     JB CHECKING
-    CMP AL, '9'
+    CMP AL, '9'     
     JA CHECKING
 
+    MOV DL, AL
+    MOV AH, 02H
+    INT 21H
+
     SUB AL, '0'
-    MOV AH, 0         
-    
-    MOV DX, AX      
-    
-    MOV AX, BX        
+    MOV AH, 0
+    MOV DX, AX        
+
+    MOV AX, BX
     MOV SI, 10
-    MUL SI           
-    ADD AX, DX        
-    MOV BX, AX       
+    MUL SI
+    ADD AX, DX
+    MOV BX, AX
 
     LOOP CHECKING
 
