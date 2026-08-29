@@ -1,7 +1,7 @@
 .MODEL SMALL
 .STACK 100
 .DATA
-
+;tyler if you can read this it means i can edit the goddamn file <3
 	;MENU DISPLAYS
 	Welcome DB "			||WELCOME TO THE POINT OF SALES SYSTEM|| $"
 	login DB "				1. LOGIN$"
