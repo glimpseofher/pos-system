@@ -68,17 +68,27 @@
 	; INVENTORY DATA
     INVTITLE    DB 0AH,0DH, "			|| INVENTORY LIST ||$", 0AH,0DH, '$'
     ITEM1       DB "1. Soda Can    - Price: RM2.00 | Stock: $"
-    STOCK1      DW 550  
+    STOCK1      DW 4913  
 	PRICE1 		DW 2
-    ITEM2       DB "2. Chips       - Price: RM3.00 | Stock: $"
-    STOCK2      DW 265
-	PRICE2		DW 3
-    ITEM3       DB "3. Sandwich    - Price: RM5.00 | Stock: $"
-    STOCK3      DW 124
-	PRICE3		DW 5
+	NSTOCK1		DW ?
+	SOLD1		DW ?
+	MINSTOCK1	DW 0
 	
+    ITEM2       DB "2. Chips       - Price: RM3.00 | Stock: $"
+    STOCK2      DW 3150
+	PRICE2		DW 3
+    NSTOCK2		DW ?
+	SOLD2		DW ?
+	MINSTOCK2	DW 0
+	
+	ITEM3       DB "3. Sandwich    - Price: RM5.00 | Stock: $"
+    STOCK3      DW 1240
+	PRICE3		DW 5
+	NSTOCK3 	DW ?
+	SOLD3 		DW ?
+	MINSTOCK3	DW 0
 	;NEW SALES DATA
-	INVREFER 	DB 0AH,0DH, 'WHICH STOCK TO SELL !!DO NOT MESS UP THIS PART!!(CURRENT INVENTORY ABOVE) $',0AH,0DH,'$'
+	INVREFER 	DB 0AH,0DH, 'WHICH STOCK TO SELL[USE 0 TO FILL THE BLANKS] (CURRENT INVENTORY ABOVE) $',0AH,0DH,'$'
 	INVSALE		DB 0AH,0DH,'INVALID STOCK DETECTED,TRY AGAIN!(1-3) $',0AH,0DH,'$'
 	SALEPROMPT 	DW ?
 	SCONFIRM	DB 0AH,0DH,'ARE YOU CONFIRMED TO MAKE THIS SALE?(Y/N):$'
@@ -94,21 +104,23 @@
 	;SALES REPORT DATA
 	TTLSALE 	DB 0AH,0DH,'==========TOTAL SALES==========$',0AH,0DH,'$'
 	REPITEM1	DB 0AH,0DH,'1. Soda Can    - Price: RM2.00 | Sold:$'
-	AMNTITEM1	DW ?
+	AMNTITEM1	DW 0
 	RMSTOCK1	DW ?
 	
-	REPITEM2	DB 0AH,0DH,'2. Chips      - Price: RM3.00 | Sold:$'
+	REPITEM2	DB 0AH,0DH,'2. Chips       - Price: RM3.00 | Sold:$'
 	AMNTITEM2	DW ?
-	RMSTOCK2	DB ?
+	RMSTOCK2	DW ?
 	
 	REPITEM3	DB 0AH,0DH,'3. Sandwich    - Price: RM5.00 | Sold:$'
-	AMNTITEM3	DW ?
+	AMNTITEM3	DW 0
 	RMSTOCK3	DW ?
 	
 	REVENUE		DB 'units Profit:RM$'
-	TEMP 		DW ? 
+	TEMP1 		DW ? 
+	TEMP2 		DW ? 
+	TEMP3		DW ? 
 	NUMSTK 		DB ?
-	
+	NULLINP		DB	0AH,0DH,'INPUT CANNOT BE ANYTHING OTHER THAN NUMBERS THATS < ZERO,RETURNING TO FUNCTTION MENU!$',0AH,0DH,'$' 
 	
 	
 .CODE
@@ -124,8 +136,6 @@ MAIN PROC
 	MOV REGOUTUSER[0], '1'
 	MOV REGACTPASS, 1
 	MOV REGOUTPASS[0], '1'
-	
-	
 	;login menu
 	MOV AH, 09H
 	LEA DX, NL
@@ -190,8 +200,6 @@ MAIN PROC
 	INT 21H 
 	CMP AL, 'Y'
 	JE EXITJJ
-	CMP AL,'0'
-	JE EXITJJ ;!!!!!!!!!!!!!!!!!!!!!!!!TYLER CHAANGED THIS BECAUSE MOVING HIS FAT FINGERS IS TORTURE (and yes i know i prolly wasted more time typing this)!!!!!!!!
 	CMP AL, 'y'
 	JE EXITJJ
 	CMP AL, 'N'
@@ -545,7 +553,7 @@ MAIN PROC
 	
 	inventoryjj:
 	CALL inventoryj
-	JMP FUNCTIONMENUJ ;tyler moved the jmp functionmenuj to here because the code didnt work the way he have intended :( 
+	JMP FUNCTIONMENUJ 
 	
 	REPORTJJ:
 	CALL REPORTSSS
@@ -555,7 +563,6 @@ MAIN PROC
 	JMP NEWSALES
 	
 	inventoryj:
-	;inventory menu display
 	MOV AH, 09H
 	LEA DX, NL
 	INT 21H
@@ -603,18 +610,14 @@ NEWSALES:
 	LEA DX,NL
 	INT 21H
 	MOV AH,01H	
-	INT 21H ;choice is stored in AL!!
+	INT 21H 
 	MOV NUMSTK,AL
-	CMP AL,'0'
-	JLE INV
 	CMP AL,'1'
 	JE SSODAS
 	CMP AL,'2' 
 	JE SCHIPS
 	CMP  AL,'3'
 	JE SSANDS
-	CMP AL,'4'
-	JE SHOW 
 	MOV AH,09H
 	LEA DX,INVSALE
 	INT 21H
@@ -624,14 +627,17 @@ INV:
 	INT 21H
 	RET
 SSODAS:
+	MOV AL,'0'
 	CALL SSODA
 	JMP FUNCTIONMENUJ
-SSANDS:
-	CALL SSAND
-	JMP FUNCTIONMENUJ 
 SCHIPS:	
+	MOV AL,'0'
 	CALL SCHIP
 	JMP FUNCTIONMENUJ
+SSANDS:
+	MOV AL,'0'
+	CALL SSAND
+	JMP FUNCTIONMENUJ 
 SSODA :
 	MOV AH, 09H
     LEA DX, NL
@@ -641,24 +647,20 @@ SSODA :
     INT 21H
     CALL INP4DIGITS          
 	CALL CONV
-	MOV BX,STOCK1
-	;CALL CONV 
-	CMP AX,BX
-	CMP STOCK1,AX
-	MOV TEMP,AX
-	JL INVSTOCKS ;write jump not enough stock
-	;write if sufficient stock
+	CMP Sold[3],'0'
+	JB INPZERO
+	MOV MINSTOCK1,AX
+	MOV TEMP1,AX
+	MOV AX,TEMP1
+	CMP STOCK1,AX 
+	JL INVSTOCKS 
     MOV AH, 09H
     LEA DX, NL
     INT 21H
+	MOV AL,'0'
     JMP SCONFIRMM
 	INT 21H 
-	RET
-SHOW:
-	MOV AL,AMNTITEM1
-	CALL CONV
-	CALL PRINT_NUM_4DIGIT
-	JMP FUNCTIONMENUJ
+	RET 	 	
 SCHIP:
 	MOV AH, 09H
     LEA DX, NL
@@ -668,18 +670,27 @@ SCHIP:
     INT 21H
     CALL INP4DIGITS          
 	CALL CONV
-	MOV BX,STOCK2
-	;CALL CONV 
-	CMP AX,BX
+	CMP Sold[3],'0'
+	JB INPZERO
+	MOV MINSTOCK2,AX
+	MOV TEMP2,AX	
+	MOV AX,TEMP2
 	CMP STOCK2,AX
-	JL INVSTOCKS ;write jump not enough stock
-	MOV TEMP,AX
-	;write if sufficient stock
+	JL INVSTOCKS 
     MOV AH, 09H
     LEA DX, NL
     INT 21H
     JMP SCONFIRMM
-	RET	 	
+	INT 21H 
+	RET 
+INVSTOCKS:
+	JMP INVSTOCK
+	RET		
+INPZERO:
+	MOV AH,09H
+	LEA DX,NULLINP
+	INT 21H
+	JMP FUNCTIONMENUJ
 SSAND:
 	MOV AH, 09H
     LEA DX, NL
@@ -689,23 +700,20 @@ SSAND:
     INT 21H
     CALL INP4DIGITS          
 	CALL CONV
-	MOV BX,STOCK3
-	;CALL CONV 
-	CMP AX,BX
+	CMP Sold[3],'0'
+	JB INPZERO
+	MOV MINSTOCK3,AX
+	MOV TEMP3,AX
+	;CALL CONV
+	MOV AX,TEMP3
 	CMP STOCK3,AX
-	JL INVSTOCKS ;write jump not enough stock
-	MOV TEMP,AX
-	;write if sufficient stock
+	JL INVSTOCKS 
     MOV AH, 09H
     LEA DX, NL
     INT 21H
     JMP SCONFIRMM
-	RET
-	
-INVSTOCKS:
-	JMP INVSTOCK
-	RET	
-	;SALE CONFIRMATION
+	INT 21H 
+	RET 
 SCONFIRMM:
 	LEA DX,SCONFIRM 
 	INT 21H
@@ -738,34 +746,34 @@ SNOO:
 	MOV AH,09H
 	LEA DX,SNO
 	INT 21H
+	MOV AL,'0'
 	RET
 SINN:
 	MOV AH,09H
 	LEA DX,SIN
 	INT 21H
+	MOV AL,'0'
 	JMP SCONFIRMM
 INVSTOCK:
 	MOV AH,09H
 	LEA DX,OVRSTOCK
 	INT 21H 
 	RET
-STOCKS1:
-	MOV AX,TEMP
-	SUB STOCK1,AX
-	MOV AX,TEMP
-	ADD AX,AMNTITEM1
 	
+STOCKS1:
+	MOV AX, TEMP1
+	SUB STOCK1, AX
+	ADD AMNTITEM1,AX 
 	RET
 STOCKS2:	
-	MOV AX,TEMP
+	MOV AX,TEMP2
 	SUB STOCK2,AX
-	ADD AX,AMNTITEM2
-	CALL CONV
+	ADD AMNTITEM2,AX 
 	RET
 STOCKS3:
-	MOV AX,TEMP 	
+	MOV AX,TEMP3 	
 	SUB STOCK3,AX
-	ADD AMNTITEM3,AX
+	ADD AMNTITEM3,AX 
 	RET
 	;========SALES REPORT=======
 REPORTSSS:
@@ -773,24 +781,51 @@ REPORTSSS:
 	MOV AH,09H
 	LEA DX,TTLSALE ;HEADER
 	INT 21H
+   
 	MOV AH,09H
-	LEA DX,REPITEM1
-	INT 21H 	 	
-	MOV AL,AMNTITEM1
-	CALL CONV
+    LEA DX,REPITEM1
+    INT 21H 	 
+    MOV AX,AMNTITEM1
+    CALL PRINT_NUM_4DIGIT   
+    MOV AH,09H
+    LEA DX,REVENUE 
+    INT 21H
+    MOV AX,AMNTITEM1
+    MOV BX,PRICE1         
+    MUL BX                 
+    MOV RMSTOCK1,AX
 	CALL PRINT_NUM_4DIGIT
-	MOV AH,09H
-	LEA DX,REVENUE 
-	INT 21H
-	MOV AMNTITEM1,AL
-	MUL PRICE1
-	MOV RMSTOCK1,AL
-	CALL CONV
-	CALL PRINT_NUM_4DIGIT
-	JMP FUNCTIONMENUJ
-
 	
-
+	MOV AH,09H
+    LEA DX,REPITEM2
+    INT 21H 	 
+    MOV AX,AMNTITEM2
+    CALL PRINT_NUM_4DIGIT  
+    MOV AH,09H
+    LEA DX,REVENUE 
+    INT 21H
+    MOV AX,AMNTITEM2
+    MOV BX,PRICE2
+	MUL BX
+    MOV RMSTOCK2,AX
+	CALL PRINT_NUM_4DIGIT
+	
+	MOV AH,09H
+    LEA DX,REPITEM3
+    INT 21H 	 
+    MOV AX,AMNTITEM3
+    CALL PRINT_NUM_4DIGIT 
+    MOV AH,09H
+    LEA DX,REVENUE 
+    INT 21H
+    MOV AX,AMNTITEM3
+    MOV BX,PRICE3
+	MUL BX
+    MOV RMSTOCK3,AX
+	CALL PRINT_NUM_4DIGIT
+		
+	JMP FUNCTIONMENUJ
+	
 	EXITJ:
 	MOV AH, 09H
 	LEA DX, NL
@@ -870,19 +905,27 @@ INP4DIGITS PROC
 
 INP_LOOP:
     MOV AH, 01H                     
-    INT 21H
+    INT 21H  
+
+	CMP AL, '0'
+    JB  NOMPTY               
+    CMP AL, '9'
+    JA  NOMPTY                  
+    CMP AL, 0DH
+    JE  FILL_ZEROES           
     
-    CMP AL, 0DH                     ; Did user press Enter?
-    JE  FILL_ZEROES                 ; If yes, pad the rest of the array
-    
-    MOV [SI], AL                    ; Store valid character
+    MOV [SI], AL                    
     INC SI                          
     LOOP INP_LOOP
     RET
-
+	
+NOMPTY:
+	MOV AH,09H
+	LEA DX,NULLINP
+	INT 21H
+	JMP FUNCTIONMENUJ
 FILL_ZEROES:
-    ; Optional: Pad remaining array slots with '0' if user pressed Enter early
-    JCXZ DONE                       ; If CX is already 0, finish
+    JCXZ DONE
 PAD_LOOP:
     MOV BYTE PTR [SI], '0'
     INC SI
@@ -892,13 +935,13 @@ DONE:
 INP4DIGITS ENDP
 
 CONV PROC
-    XOR AX, AX                      ; AX = 0
-    MOV CX, 4                       ; 4 digits
-    LEA SI, SOLD                   ; Point to 'digits' array
-    MOV BX, 10                      ; Base 10 multiplier
+    XOR AX, AX                     
+    MOV CX, 4                      
+	LEA SI, SOLD                   
+	MOV BX, 10                      
 
 CONV_LOOP:
-    MUL BX                          ; AX = AX * 10
+    MUL BX                         
     MOV DL, [SI]                    ; Read ASCII byte
     SUB DL, '0'                     ; Strip ASCII offset
     XOR DH, DH                      ; Clear DH
