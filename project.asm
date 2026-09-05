@@ -1,7 +1,7 @@
 .MODEL SMALL
 .STACK 100
 .DATA
-;tyler if you can read this it means i can edit the goddamn file <3
+
 	;MENU DISPLAYS
 	Welcome DB "			||WELCOME TO THE POINT OF SALES SYSTEM|| $"
 	login DB "				1. LOGIN$"
@@ -48,7 +48,7 @@
 		REGACTPASS DB ?
 		REGOUTPASS DB 11 DUP('$') 
 		
-			;CONFIRMATION
+			;CONFIRMATION 
 		REGCOMPLETE DB "REGISTRATION COMPLETE!$"
 		
 		;LOGOUT FUNCTION
@@ -68,17 +68,17 @@
 	; INVENTORY DATA
     INVTITLE    DB 0AH,0DH, "			|| INVENTORY LIST ||$", 0AH,0DH, '$'
     ITEM1       DB "1. Soda Can    - Price: RM2.00 | Stock: $"
-    STOCK1      DW 5150  
+    STOCK1      DW 550  
 	PRICE1 		DW 2
     ITEM2       DB "2. Chips       - Price: RM3.00 | Stock: $"
-    STOCK2      DW 2165
+    STOCK2      DW 265
 	PRICE2		DW 3
     ITEM3       DB "3. Sandwich    - Price: RM5.00 | Stock: $"
-    STOCK3      DW 1224
+    STOCK3      DW 124
 	PRICE3		DW 5
 	
 	;NEW SALES DATA
-	INVREFER 	DB 0AH,0DH, 'WHICH STOCK TO SELL (CURRENT INVENTORY BELOW) $',0AH,0DH,'$'
+	INVREFER 	DB 0AH,0DH, 'WHICH STOCK TO SELL !!DO NOT MESS UP THIS PART!!(CURRENT INVENTORY ABOVE) $',0AH,0DH,'$'
 	INVSALE		DB 0AH,0DH,'INVALID STOCK DETECTED,TRY AGAIN!(1-3) $',0AH,0DH,'$'
 	SALEPROMPT 	DW ?
 	SCONFIRM	DB 0AH,0DH,'ARE YOU CONFIRMED TO MAKE THIS SALE?(Y/N):$'
@@ -90,11 +90,9 @@
 	NSTOCK2		DW ?           
 	NSTOCK3		DW ?
 	SELL1		DB 0AH,0DH,'HOW MUCH SODA TO BE SOLD: $',0AH,0DH,'$'
-	SOLD1		DW ?
+	SOLD        DB 4 DUP(?)    
 	SELL2		DB 0AH,0DH,'HOW MUCH CHIPS TO BE SOLD: $',0AH,0DH,'$'
-	SOLD2		DW ?
 	SELL3		DB 0AH,0DH,'HOW MUCH SANDWICH TO BE SOLD: $',0AH,0DH,'$'	
-	SOLD3		DW ?
 	OVRSTOCK 	DB 0AH,0DH,'SOLD AMOUNT GREATER THAN STOCK,TRY AGAIN$',0AH,0DH,'$'
 	;SALES REPORT DATA
 	TTLSALE 	DB 0AH,0DH,'==========TOTAL SALES==========$',0AH,0DH,'$'
@@ -595,54 +593,78 @@ MAIN PROC
 	MOV AH,09H
 	LEA DX,NL
 	INT 21H
+	CALL inventoryj
 	MOV AH,09H
 	LEA DX,INVREFER
+	INT 21H	
+	MOV AH,09H
+	LEA DX,NL
 	INT 21H
-	CALL inventoryj
 	MOV AH,01H	
 	INT 21H ;choice is stored in AL!!
+	CMP AL, 0DH
+	JE INVS
 	CMP AL,'1'
 	JE SSODAS
 	CMP AL,'2'
 	JE SCHIPS
 	CMP AL, '3'
-	JE SSAND
+	JE SSANDS
+	CMP AL,'4'
+	JE SHOW
 	CMP AL,'0'
+	JLE INVS
+	CMP AL,'5' ;CHANGE BACK TO 4
+	JGE INVS
+	JMP NEWSALES
+	
+	
+	INVS:
+	JMP INV
+	RET
+	INV:
 	LEA DX,INVSALE
 	INT 21H
+	RET
 	
-	
-
 	SSODAS:
 	CALL SSODA
 	JMP FUNCTIONMENUJ
 	
-	SSODA:
-	;SELLING AMOUNT CHECK FOR SODA 
-	MOV AH,09H
-	LEA DX, NL
-	INT 21H
-	LEA DX,SELL1
-	INT 21H
-	CALL INP4DIGIT
-	MOV PRICE1,AL
-	MUL AL
-	MOV SOLD1,AX
-	MOV AH,02H
-	MOV AL,SOLD1
-	INT 21H 	
+	SHOW:
+	MOV AX,NSTOCK1
+	CALL PRINT_NUM_4DIGIT
+	;MOV AX,STOCK1
+	;CMP AX,SOLD1
+	JMP FUNCTIONMENUJ
 	
-	;MOV AH,02H ;DIDSPLAY IS 02H
-	;MOV DL,ALPHA 
-	;INT 21H
-	;CHECKING IF STOCK IS ENOUGH FOR THE SALE 
-	;MOV AX,SOLD1
-	;CMP AX,STOCK1
-	;JG INVSTOCKS
-    ;JMP SCONFIRMM
-	
+SSODA :
 	MOV AH, 09H
     LEA DX, NL
+    INT 21H
+
+    MOV AH, 09H
+    LEA DX, SELL1
+    INT 21H
+
+    CALL INP4DIGITS          
+	CALL CONV
+	MOV BX,STOCK1
+	;CALL CONV 
+	CMP AX,BX
+	CMP STOCK1,AX
+	JLE INVSTOCKS ;write jump not enough stock
+	;write if sufficient stock
+    MOV AH, 09H
+    LEA DX, NL
+    INT 21H
+    JMP SCONFIRMM
+	INT 21H 
+	RET
+
+	
+	MOV AH, 09H
+    LEA DX, NL 
     INT 21H
 	JMP SCONFIRMM
 	;SALES CONFIRMATION
@@ -650,7 +672,9 @@ MAIN PROC
 	SCHIPS:
 	CALL SCHIP
 	JMP FUNCTIONMENUJ
-	
+	SSANDS:
+	CALL SSAND
+	JMP FUNCTIONMENUJ
 	SCHIP:
 	;SELLING AMOUNT CHECK FOR CHIPS 
 	MOV AH,09H
@@ -658,8 +682,8 @@ MAIN PROC
 	INT 21H
 	LEA DX,SELL2
 	INT 21H
-	CALL INP4DIGIT
-	MOV SOLD2,AX
+	CALL INP4DIGITS 
+	;MOV SOLD,AX
 	MOV AH, 09H
     LEA DX, NL
     INT 21H
@@ -677,16 +701,16 @@ MAIN PROC
 	INT 21H
 	LEA DX,SELL3
 	INT 21H
-	CALL INP4DIGIT
-	MOV SOLD3,AX
+	CALL INP4DIGITS 
+	;MOV SOLD,AX
 	MOV AH, 09H
     LEA DX, NL
     INT 21H
 	JMP SCONFIRMM
 	
-	;INVSTOCKS:
-	;JMP INVSTOCK
-	;RET
+	INVSTOCKS:
+	JMP INVSTOCK
+	RET
 	
 	;SALE CONFIRMATION
 	SCONFIRMM:
@@ -710,6 +734,11 @@ MAIN PROC
 	MOV AH,09H	
 	LEA DX,SYES
 	INT 21H
+	SUB STOCK1,AX
+	SUB STOCK1,'0'
+	MOV NSTOCK1,AX
+	INT 21H	
+	CALL CONV
 	RET
 	
 	SNOO:
@@ -724,11 +753,13 @@ MAIN PROC
 	INT 21H
 	JMP SCONFIRMM
 	
-	;INVSTOCK:
-	;MOV AH,09H
-	;LEA DX,OVRSTOCK
-	;INT 21H 
-	;RET
+	INVSTOCK:
+	MOV AH,09H
+	LEA DX,OVRSTOCK
+	INT 21H 
+	RET
+	
+	;========SALES REPORT=======
 
 
 	
@@ -745,6 +776,7 @@ MAIN PROC
 
 MAIN ENDP
 
+
 ;to use PRINT_NUM_4DIGIT, just write it like :
 ;mov ax , (variable/digit)
 ;call PRINT_NUM_4DIGIT
@@ -754,33 +786,49 @@ PRINT_NUM_4DIGIT PROC
     PUSH CX
     PUSH DX
 
-    MOV CX, 0
-    MOV BX, 10
+    MOV BX, AX          ; Save original number in BX
 
-CONVERT_LOOP:
+    ; 1. THOUSANDS (Divide by 1000)
+    MOV AX, BX
     MOV DX, 0
-    DIV BX
-    PUSH DX
-    INC CX
-    CMP AX, 0
-    JNE CONVERT_LOOP
-
-    MOV DX, 0
-
-PAD_LOOP:
-    CMP CX, 4
-    JAE PRINT_LOOP
-    PUSH DX
-    INC CX
-    JMP PAD_LOOP
-
-PRINT_LOOP:
-    POP DX
+    MOV CX, 1000
+    DIV CX              ; AX = Quotient, DX = Remainder
+    MOV BX, DX          ; Save remainder (0-999)
+    
+    MOV DL, AL
     ADD DL, '0'
     MOV AH, 02H
-    INT 21H
-    DEC CX
-    JNZ PRINT_LOOP
+    INT 21H             ; Print Thousands
+
+    ; 2. HUNDREDS (Divide by 100)
+    MOV AX, BX
+    MOV DX, 0
+    MOV CX, 100
+    DIV CX              ; AX = Quotient, DX = Remainder
+    MOV BX, DX          ; Save remainder (0-99)
+    
+    MOV DL, AL
+    ADD DL, '0'
+    MOV AH, 02H
+    INT 21H             ; Print Hundreds
+
+    ; 3. TENS (Divide by 10)
+    MOV AX, BX
+    MOV DX, 0
+    MOV CX, 10
+    DIV CX              ; AX = Quotient (Tens), DX = Remainder (Ones)
+    MOV BX, DX          ; Save remainder (Ones) in BX
+    
+    MOV DL, AL
+    ADD DL, '0'
+    MOV AH, 02H
+    INT 21H             ; Print Tens
+
+    ; 4. ONES
+    MOV DL, BL
+    ADD DL, '0'
+    MOV AH, 02H
+    INT 21H             ; Print Ones
 
     POP DX
     POP CX
@@ -789,47 +837,48 @@ PRINT_LOOP:
     RET
 PRINT_NUM_4DIGIT ENDP
 
-INP4DIGIT PROC
-    PUSH BX
-    PUSH CX
-    PUSH DX
+INP4DIGITS PROC
+    MOV CX, 4                       
+    LEA SI, Sold                  
 
-    MOV BX, 0        
-    MOV CX, 4         
-
-CHECKING:
-    MOV AH, 07H        
+INP_LOOP:
+    MOV AH, 01H                     
     INT 21H
-
-    CMP AL, 0DH     
-    JE DONE
-
-    CMP AL, '0'    
-    JB CHECKING
-    CMP AL, '9'     
-    JA CHECKING
-
-    MOV DL, AL
-    MOV AH, 02H
-    INT 21H
-
-    SUB AL, '0'
-    MOV AH, 0
-    MOV DX, AX        
-
-    MOV AX, BX
-    MOV SI, 10
-    MUL SI
-    ADD AX, DX
-    MOV BX, AX
-
-    LOOP CHECKING
-
-DONE:
-    MOV AX, BX        
-    POP DX
-    POP CX
-    POP BX
+    
+    CMP AL, 0DH                     ; Did user press Enter?
+    JE  FILL_ZEROES                 ; If yes, pad the rest of the array
+    
+    MOV [SI], AL                    ; Store valid character
+    INC SI                          
+    LOOP INP_LOOP
     RET
-INP4DIGIT ENDP
+
+FILL_ZEROES:
+    ; Optional: Pad remaining array slots with '0' if user pressed Enter early
+    JCXZ DONE                       ; If CX is already 0, finish
+PAD_LOOP:
+    MOV BYTE PTR [SI], '0'
+    INC SI
+    LOOP PAD_LOOP
+DONE:
+    RET
+INP4DIGITS ENDP
+CONV PROC
+    XOR AX, AX                      ; AX = 0
+    MOV CX, 4                       ; 4 digits
+    LEA SI, SOLD                   ; Point to 'digits' array
+    MOV BX, 10                      ; Base 10 multiplier
+
+CONV_LOOP:
+    MUL BX                          ; AX = AX * 10
+    MOV DL, [SI]                    ; Read ASCII byte
+    SUB DL, '0'                     ; Strip ASCII offset
+    XOR DH, DH                      ; Clear DH
+    ADD AX, DX                      ; AX = (AX * 10) + Digit
+    INC SI                          ; Next character
+    LOOP CONV_LOOP
+
+    RET                             ; Converted value is returned in AX
+CONV ENDP
+
 END MAIN
